@@ -61,6 +61,11 @@ export interface CitationEdge {
   paper_id_b: string;
   edge_type: "direct_citation" | "shared_citation" | "same_author" | "topic_similarity";
   weight: number;
+  metadata?: {
+    shared_terms?: string[];
+    shared_authors?: string[];
+    label?: string;
+  };
 }
 
 export interface RagCitation {

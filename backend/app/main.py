@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import chat, embed, health, search
+from app.api import chat, embed, health, search, citations
 from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -35,6 +35,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["Health"])
 app.include_router(chat.router, prefix="/api", tags=["RAG Chat"])
 app.include_router(embed.router, prefix="/api", tags=["Paper Indexing"])
+app.include_router(citations.router, prefix="/api/citations", tags=["Citations Graph"])
 app.include_router(search.router, prefix="/api/papers", tags=["Paper Search Proxy"])
 
 
