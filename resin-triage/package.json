@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "triage": "node daily-triage.js"
+    "triage": "node daily-triage.js",
+    "ingest": "node ingest-feeds.js",
+    "ingest:dry": "node ingest-feeds.js --dry-run",
+    "all": "node ingest-feeds.js && node daily-triage.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

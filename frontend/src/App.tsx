@@ -12,6 +12,7 @@ import Library from "./pages/Library.tsx";
 import Graph from "./pages/Graph.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import Settings from "./pages/Settings.tsx";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/papers" element={<ProtectedRoute><Papers /></ProtectedRoute>} />
             <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
             <Route path="/graph" element={<ProtectedRoute><Graph /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

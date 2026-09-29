@@ -1,6 +1,6 @@
 import { NavLink } from "@/components/NavLink";
-import { Newspaper, BookOpen, FolderOpen, Network, Sparkles, LogOut, User } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { Newspaper, BookOpen, FolderOpen, Network, Sparkles, LogOut, User, Settings } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
@@ -13,6 +13,7 @@ const items = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   return (
@@ -66,13 +67,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <div className="text-muted-foreground truncate" title={user.email}>{user.email}</div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => supabase?.auth.signOut()} 
-                  className="p-1.5 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-smooth ml-2"
-                  title="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1 ml-2">
+                  <button
+                    onClick={() => navigate("/settings")}
+                    className={`p-1.5 shrink-0 rounded transition-smooth ${
+                      loc.pathname === "/settings"
+                        ? "text-foreground bg-secondary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    }`}
+                    title="Research Interests"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => supabase?.auth.signOut()}
+                    className="p-1.5 shrink-0 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-smooth"
+                    title="Sign out"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>

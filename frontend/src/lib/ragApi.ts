@@ -207,3 +207,23 @@ export async function streamPaperRAG(
 
   return controller;
 }
+
+export async function fetchPaperChatHistory(paperId: string): Promise<RagChatMessage[]> {
+  const headers = await getAuthHeader();
+  const response = await fetch(`${BACKEND_URL}/api/chat/history/${paperId}`, { headers });
+  if (!response.ok) return [];
+  const data = await response.json();
+  // Backend returns [{role, content, created_at}] — map to RagChatMessage
+  return (data.history ?? []).map((row: { role: string; content: string }) => ({
+    role: row.role as "user" | "assistant",
+    content: row.content,
+  }));
+}
+
+export async function clearPaperChatHistory(paperId: string): Promise<void> {
+  const headers = await getAuthHeader();
+  await fetch(`${BACKEND_URL}/api/chat/history/${paperId}`, {
+    method: "DELETE",
+    headers,
+  });
+}

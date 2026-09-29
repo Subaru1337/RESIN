@@ -7,7 +7,12 @@ from fastapi.responses import StreamingResponse
 from app.agent.agent import ResearchAgent
 from app.core.auth import get_current_user_id
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.chat_service import load_chat_history, save_chat_turn
+from app.services.chat_service import (
+    clear_paper_chat_history,
+    load_chat_history,
+    load_paper_chat_history,
+    save_chat_turn,
+)
 from app.services.rag import RAGService
 from app.services.redis_cache import RedisCacheService
 
@@ -51,8 +56,8 @@ def chat_endpoint(
                 timer=timer,
             )
 
-            save_chat_turn(user_id, None, "user", payload.message)
-            save_chat_turn(user_id, None, "assistant", response.answer)
+            save_chat_turn(user_id, None, "user", payload.message, paper_id=canonical_id)
+            save_chat_turn(user_id, None, "assistant", response.answer, paper_id=canonical_id)
             if not response.answer.startswith("This paper hasn't") and not response.answer.startswith("Indexing failed:"):
                 cache_service.set_cached_response(canonical_id, payload.message, response.model_dump())
             return response
@@ -168,3 +173,23 @@ def get_folder_chat_history(
     """Retrieve chat history for a user, optionally filtered by folder."""
     history = load_chat_history(user_id, folder_id, limit=200)
     return {"history": history}
+
+
+@router.get("/chat/history/{paper_id}")
+def get_paper_chat_history(
+    paper_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Retrieve saved chat history for a specific paper (library papers only)."""
+    history = load_paper_chat_history(user_id, paper_id, limit=200)
+    return {"history": history}
+
+
+@router.delete("/chat/history/{paper_id}")
+def delete_paper_chat_history(
+    paper_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Clear all saved chat turns for a specific paper."""
+    success = clear_paper_chat_history(user_id, paper_id)
+    return {"cleared": success}

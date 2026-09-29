@@ -101,7 +101,7 @@ export function PaperCard({ paper, persistedId }: PaperCardProps) {
                 Ask questions and retrieve insights grounded in this paper using AI.
               </DialogDescription>
             </DialogHeader>
-            <PaperChat paper={paper} />
+            <PaperChat paper={paper} isInLibrary={!!persistedId} />
           </DialogContent>
         </Dialog>
 
