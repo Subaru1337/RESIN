@@ -44,28 +44,69 @@ export async function deleteFolder(id: string): Promise<void> {
 /** Upsert a paper by semantic_scholar_id and return the canonical row (with uuid). */
 export async function upsertPaper(p: Paper): Promise<Paper> {
   if (!supabase) throw new Error("Supabase not configured");
-  const payload = {
-    doi: p.doi,
-    title: p.title,
-    authors: p.authors,
-    year: p.year,
-    abstract: p.abstract,
-    citation_count: p.citation_count,
-    open_access_url: p.open_access_url,
-    semantic_scholar_id: p.semantic_scholar_id,
-    arxiv_id: p.arxiv_id,
-  };
-  // Try by semantic_scholar_id first
-  if (p.semantic_scholar_id) {
+
+  const cleanDoi = p.doi ? p.doi.replace("https://doi.org/", "").trim() : null;
+  const cleanS2Id = p.semantic_scholar_id ? p.semantic_scholar_id.trim() : null;
+  const cleanArxiv = p.arxiv_id ? p.arxiv_id.replace(/^arxiv:/i, "").trim() : null;
+
+  // 1. Try by DOI
+  if (cleanDoi) {
     const { data: existing } = await supabase
       .from("papers")
       .select("*")
-      .eq("semantic_scholar_id", p.semantic_scholar_id)
+      .or(`doi.eq.${cleanDoi},doi.eq.https://doi.org/${cleanDoi}`)
       .maybeSingle();
     if (existing) return existing as Paper;
   }
+
+  // 2. Try by semantic_scholar_id
+  if (cleanS2Id) {
+    const { data: existing } = await supabase
+      .from("papers")
+      .select("*")
+      .eq("semantic_scholar_id", cleanS2Id)
+      .maybeSingle();
+    if (existing) return existing as Paper;
+  }
+
+  // 3. Try by arxiv_id
+  if (cleanArxiv) {
+    const { data: existing } = await supabase
+      .from("papers")
+      .select("*")
+      .eq("arxiv_id", cleanArxiv)
+      .maybeSingle();
+    if (existing) return existing as Paper;
+  }
+
+  const payload = {
+    doi: cleanDoi ?? null,
+    title: p.title,
+    authors: p.authors ?? [],
+    year: p.year ?? null,
+    abstract: p.abstract ?? null,
+    citation_count: p.citation_count ?? 0,
+    open_access_url: p.open_access_url ?? null,
+    semantic_scholar_id: cleanS2Id ?? null,
+    arxiv_id: cleanArxiv ?? null,
+  };
+
   const { data, error } = await supabase.from("papers").insert(payload).select().single();
-  if (error) throw error;
+  if (error) {
+    if (error.message.includes("papers_doi_key") && cleanDoi) {
+      const { data: fb } = await supabase.from("papers").select("*").eq("doi", cleanDoi).maybeSingle();
+      if (fb) return fb as Paper;
+    }
+    if (error.message.includes("papers_semantic_scholar_id_key") && cleanS2Id) {
+      const { data: fb } = await supabase.from("papers").select("*").eq("semantic_scholar_id", cleanS2Id).maybeSingle();
+      if (fb) return fb as Paper;
+    }
+    if (error.message.includes("papers_arxiv_id_key") && cleanArxiv) {
+      const { data: fb } = await supabase.from("papers").select("*").eq("arxiv_id", cleanArxiv).maybeSingle();
+      if (fb) return fb as Paper;
+    }
+    throw error;
+  }
   return data as Paper;
 }
 

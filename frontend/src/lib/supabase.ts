@@ -92,38 +92,118 @@ export async function savePaperToFolder(paper: Paper, folderId: string): Promise
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Step A: Upsert paper into papers table
-  const payload = {
-    title: paper.title,
-    authors: paper.authors ?? [],
-    year: paper.year ?? null,
-    abstract: paper.abstract ?? null,
-    citation_count: paper.citation_count ?? 0,
-    semantic_scholar_id: paper.semantic_scholar_id ?? null,
-    arxiv_id: paper.arxiv_id ?? null,
-    doi: paper.doi ?? null,
-    open_access_url: paper.open_access_url ?? null,
-    updated_at: new Date().toISOString(),
-  };
+  const cleanDoi = paper.doi ? paper.doi.replace("https://doi.org/", "").trim() : null;
+  const cleanS2Id = paper.semantic_scholar_id ? paper.semantic_scholar_id.trim() : null;
+  const cleanArxiv = paper.arxiv_id ? paper.arxiv_id.replace(/^arxiv:/i, "").trim() : null;
 
-  const { data: storedPaper, error: paperError } = await supabase
-    .from("papers")
-    .upsert(payload, { 
-      onConflict: "semantic_scholar_id",
-      ignoreDuplicates: false
-    })
-    .select()
-    .single();
+  let existingPaperId: string | null = null;
 
-  if (paperError) throw paperError;
+  // 1. Check if paper already exists by DOI
+  if (cleanDoi) {
+    const { data } = await supabase
+      .from("papers")
+      .select("id, semantic_scholar_id, arxiv_id, abstract, open_access_url")
+      .or(`doi.eq.${cleanDoi},doi.eq.https://doi.org/${cleanDoi}`)
+      .maybeSingle();
+    if (data) {
+      existingPaperId = data.id;
+      // Patch missing fields if available
+      const updates: any = {};
+      if (!data.semantic_scholar_id && cleanS2Id) updates.semantic_scholar_id = cleanS2Id;
+      if (!data.arxiv_id && cleanArxiv) updates.arxiv_id = cleanArxiv;
+      if (!data.abstract && paper.abstract) updates.abstract = paper.abstract;
+      if (!data.open_access_url && paper.open_access_url) updates.open_access_url = paper.open_access_url;
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("papers").update(updates).eq("id", data.id);
+      }
+    }
+  }
+
+  // 2. Check by semantic_scholar_id if not found yet
+  if (!existingPaperId && cleanS2Id) {
+    const { data } = await supabase
+      .from("papers")
+      .select("id, doi, arxiv_id, abstract, open_access_url")
+      .eq("semantic_scholar_id", cleanS2Id)
+      .maybeSingle();
+    if (data) {
+      existingPaperId = data.id;
+      const updates: any = {};
+      if (!data.doi && cleanDoi) updates.doi = cleanDoi;
+      if (!data.arxiv_id && cleanArxiv) updates.arxiv_id = cleanArxiv;
+      if (!data.abstract && paper.abstract) updates.abstract = paper.abstract;
+      if (!data.open_access_url && paper.open_access_url) updates.open_access_url = paper.open_access_url;
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("papers").update(updates).eq("id", data.id);
+      }
+    }
+  }
+
+  // 3. Check by arxiv_id if not found yet
+  if (!existingPaperId && cleanArxiv) {
+    const { data } = await supabase
+      .from("papers")
+      .select("id, doi, semantic_scholar_id, abstract, open_access_url")
+      .eq("arxiv_id", cleanArxiv)
+      .maybeSingle();
+    if (data) {
+      existingPaperId = data.id;
+      const updates: any = {};
+      if (!data.doi && cleanDoi) updates.doi = cleanDoi;
+      if (!data.semantic_scholar_id && cleanS2Id) updates.semantic_scholar_id = cleanS2Id;
+      if (!data.abstract && paper.abstract) updates.abstract = paper.abstract;
+      if (!data.open_access_url && paper.open_access_url) updates.open_access_url = paper.open_access_url;
+      if (Object.keys(updates).length > 0) {
+        await supabase.from("papers").update(updates).eq("id", data.id);
+      }
+    }
+  }
+
+  // 4. If not existing, insert into papers table
+  if (!existingPaperId) {
+    const payload = {
+      title: paper.title,
+      authors: paper.authors ?? [],
+      year: paper.year ?? null,
+      abstract: paper.abstract ?? null,
+      citation_count: paper.citation_count ?? 0,
+      semantic_scholar_id: cleanS2Id ?? null,
+      arxiv_id: cleanArxiv ?? null,
+      doi: cleanDoi ?? null,
+      open_access_url: paper.open_access_url ?? null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: storedPaper, error: insertError } = await supabase
+      .from("papers")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (insertError) {
+      // Handle race condition or duplicate key fallback
+      if (insertError.message.includes("papers_doi_key") && cleanDoi) {
+        const { data: fb } = await supabase.from("papers").select("id").eq("doi", cleanDoi).maybeSingle();
+        if (fb) existingPaperId = fb.id;
+      } else if (insertError.message.includes("papers_semantic_scholar_id_key") && cleanS2Id) {
+        const { data: fb } = await supabase.from("papers").select("id").eq("semantic_scholar_id", cleanS2Id).maybeSingle();
+        if (fb) existingPaperId = fb.id;
+      } else if (insertError.message.includes("papers_arxiv_id_key") && cleanArxiv) {
+        const { data: fb } = await supabase.from("papers").select("id").eq("arxiv_id", cleanArxiv).maybeSingle();
+        if (fb) existingPaperId = fb.id;
+      }
+      if (!existingPaperId) throw insertError;
+    } else {
+      existingPaperId = storedPaper.id;
+    }
+  }
 
   // Step B: Link to user's folder
-  // We first check if it exists to avoid requiring a specific UNIQUE constraint setup
   const { data: existingLink } = await supabase
     .from("user_papers")
     .select("id")
     .eq("user_id", user.id)
-    .eq("paper_id", storedPaper.id)
+    .eq("paper_id", existingPaperId)
     .eq("folder_id", folderId)
     .maybeSingle();
 
@@ -132,7 +212,7 @@ export async function savePaperToFolder(paper: Paper, folderId: string): Promise
       .from("user_papers")
       .insert({
         user_id: user.id,
-        paper_id: storedPaper.id,
+        paper_id: existingPaperId,
         folder_id: folderId,
         status: "unread",
         saved_at: new Date().toISOString(),
@@ -141,7 +221,7 @@ export async function savePaperToFolder(paper: Paper, folderId: string): Promise
     if (userPaperError) throw userPaperError;
   }
 
-  return storedPaper.id;
+  return existingPaperId;
 }
 
 export async function savePaperSummary(paperId: string, summary: PaperSummary): Promise<void> {
