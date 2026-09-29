@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getFolders, createFolder, deleteFolder } from "@/lib/supabase";
 import { listUserPapers, removeUserPaper, updateUserPaper } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -7,12 +7,27 @@ import { ConfigBanner } from "@/components/ConfigBanner";
 import { PaperCard } from "@/components/PaperCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FolderPlus, FolderOpen, Trash2, Loader2, Download, FileText, BookOpen, Network } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { FolderPlus, FolderOpen, Trash2, Loader2, Download, FileText, BookOpen, Network, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { toBibTeX, toAPA, toMLA, downloadText } from "@/lib/cite";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
 import type { Folder, UserPaper, Paper } from "@/lib/types";
+
+export type LibrarySortOption =
+  | "date_desc"
+  | "date_asc"
+  | "citations_desc"
+  | "year_desc"
+  | "year_asc"
+  | "title_asc";
 
 export default function Library() {
   const [name, setName] = useState("");
@@ -25,6 +40,75 @@ export default function Library() {
   // Papers State
   const [papers, setPapers] = useState<(UserPaper & { paper: Paper })[]>([]);
   const [loadingPapers, setLoadingPapers] = useState(false);
+
+  // Sort State (persisted per folder in localStorage)
+  const [sortBy, setSortBy] = useState<LibrarySortOption>(() => {
+    return (
+      (localStorage.getItem(`resin_sort_${activeFolder ?? "all"}`) as LibrarySortOption) ||
+      "date_desc"
+    );
+  });
+
+  // Sync sort preference when active folder changes
+  useEffect(() => {
+    const saved = localStorage.getItem(`resin_sort_${activeFolder ?? "all"}`);
+    if (saved) {
+      setSortBy(saved as LibrarySortOption);
+    } else {
+      setSortBy("date_desc");
+    }
+  }, [activeFolder]);
+
+  const handleSortChange = (newSort: LibrarySortOption) => {
+    setSortBy(newSort);
+    try {
+      localStorage.setItem(`resin_sort_${activeFolder ?? "all"}`, newSort);
+    } catch {
+      // Storage unavailable or disabled
+    }
+  };
+
+  // Client-side sorting (instantaneous < 200ms)
+  const sortedPapers = useMemo(() => {
+    const list = [...papers];
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case "date_desc": {
+          const timeA = a.saved_at ? new Date(a.saved_at).getTime() : 0;
+          const timeB = b.saved_at ? new Date(b.saved_at).getTime() : 0;
+          return timeB - timeA;
+        }
+        case "date_asc": {
+          const timeA = a.saved_at ? new Date(a.saved_at).getTime() : 0;
+          const timeB = b.saved_at ? new Date(b.saved_at).getTime() : 0;
+          return timeA - timeB;
+        }
+        case "citations_desc": {
+          const countA = a.paper?.citation_count ?? 0;
+          const countB = b.paper?.citation_count ?? 0;
+          return countB - countA;
+        }
+        case "year_desc": {
+          const yearA = a.paper?.year ?? 0;
+          const yearB = b.paper?.year ?? 0;
+          return yearB - yearA;
+        }
+        case "year_asc": {
+          const yearA = a.paper?.year ?? 9999;
+          const yearB = b.paper?.year ?? 9999;
+          return yearA - yearB;
+        }
+        case "title_asc": {
+          const titleA = a.paper?.title ?? "";
+          const titleB = b.paper?.title ?? "";
+          return titleA.localeCompare(titleB);
+        }
+        default:
+          return 0;
+      }
+    });
+    return list;
+  }, [papers, sortBy]);
 
   // Load Folders
   const fetchFolders = async () => {
@@ -88,7 +172,7 @@ export default function Library() {
   };
 
   const handleExport = (fmt: "bib" | "apa" | "mla") => {
-    const items = papers.map((up) => up.paper);
+    const items = sortedPapers.map((up) => up.paper);
     if (!items.length) { toast.error("Nothing to export yet"); return; }
     const folderName = folders.find((f) => f.id === activeFolder)?.name ?? "library";
     const safe = folderName.replace(/[^a-z0-9]/gi, "-").toLowerCase();
@@ -186,14 +270,46 @@ export default function Library() {
         </aside>
 
         {/* Papers list */}
-        <section>
+        <section className="space-y-4">
+          {/* Header toolbar with paper count and sort options */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
+            <div className="text-sm text-muted-foreground">
+              {loadingPapers ? (
+                "Loading papers…"
+              ) : (
+                <span>
+                  Showing <strong className="text-foreground font-medium">{sortedPapers.length}</strong> {sortedPapers.length === 1 ? "paper" : "papers"}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <ArrowUpDown className="h-3.5 w-3.5" /> Sort:
+              </span>
+              <Select value={sortBy} onValueChange={(v) => handleSortChange(v as LibrarySortOption)}>
+                <SelectTrigger className="h-8 text-xs w-[190px] bg-card">
+                  <SelectValue placeholder="Sort papers" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="date_desc">Date saved (newest)</SelectItem>
+                  <SelectItem value="date_asc">Date saved (oldest)</SelectItem>
+                  <SelectItem value="citations_desc">Citation count (highest)</SelectItem>
+                  <SelectItem value="year_desc">Year (newest)</SelectItem>
+                  <SelectItem value="year_asc">Year (oldest)</SelectItem>
+                  <SelectItem value="title_asc">Title (A–Z)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {loadingPapers && (
             <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading saved papers…
             </div>
           )}
 
-          {!loadingPapers && papers.length === 0 && (
+          {!loadingPapers && sortedPapers.length === 0 && (
             <div className="rounded-xl border border-dashed border-border p-12 text-center">
               <FileText className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
               <div className="font-serif-display text-lg font-semibold mb-1">Nothing saved here yet</div>
@@ -203,7 +319,7 @@ export default function Library() {
           )}
 
           <div className="grid gap-4">
-            {papers.map((up) => (
+            {sortedPapers.map((up) => (
               <div key={up.id} className="relative">
                 <div className="absolute -left-3 top-6 hidden md:flex items-center gap-1">
                   <StatusPill
