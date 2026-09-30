@@ -7,15 +7,27 @@ import { getFolders, createFolder, savePaperToFolder, savePaperSummary } from "@
 import type { Folder, Paper, PaperSummary } from "@/lib/types";
 import { toast } from "sonner";
 
+import { cn } from "@/lib/utils";
+
 interface SaveToFolderProps {
   paper: Paper;
   summary?: PaperSummary | null;
   variant?: "icon" | "button";
+  buttonVariant?: "ghost" | "outline";
+  className?: string;
   saved?: boolean;
   onSaved?: () => void;
 }
 
-export function SaveToFolder({ paper, summary, variant = "button", saved, onSaved }: SaveToFolderProps) {
+export function SaveToFolder({
+  paper,
+  summary,
+  variant = "button",
+  buttonVariant,
+  className,
+  saved,
+  onSaved,
+}: SaveToFolderProps) {
   const [open, setOpen] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,7 +73,11 @@ export function SaveToFolder({ paper, summary, variant = "button", saved, onSave
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         {variant === "icon" ? (
-          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-secondary">
+          <Button
+            size="icon"
+            variant={buttonVariant ?? "ghost"}
+            className={cn("h-8 w-8 hover:bg-secondary", className)}
+          >
             {saved ? <Check className="h-4 w-4 text-primary" /> : <Bookmark className="h-4 w-4" />}
           </Button>
         ) : (
