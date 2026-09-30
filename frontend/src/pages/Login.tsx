@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/components/AuthProvider";
+import { LogoBadge } from "@/components/Logo";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
@@ -44,8 +45,8 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background paper-grain p-4">
       <div className="w-full max-w-sm p-8 rounded-2xl border border-border bg-card shadow-sm text-center animate-fade-up">
-        <div className="h-12 w-12 mx-auto rounded-xl bg-gradient-ink flex items-center justify-center shadow-ink mb-6">
-          <Sparkles className="h-6 w-6 text-paper" />
+        <div className="flex justify-center mb-6">
+          <LogoBadge size="lg" />
         </div>
         <h1 className="font-serif-display text-2xl font-bold tracking-tight mb-2">Welcome to RESIN</h1>
         <p className="text-sm text-muted-foreground mb-8">Sign in to save papers, generate AI summaries, and build your connection graph.</p>
