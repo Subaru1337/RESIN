@@ -1,17 +1,37 @@
 from typing import Literal, List, Optional
-from pydantic import BaseModel, Field
+from urllib.parse import urlparse
+from pydantic import BaseModel, Field, field_validator
 
 
 class IndexPaperRequest(BaseModel):
-    paper_id: str = Field(..., description="UUID or identifier of the paper to chunk and embed")
-    full_text: Optional[str] = Field(None, description="Full paper text if available")
+    paper_id: str = Field(..., min_length=1, max_length=200, description="UUID or identifier of the paper to chunk and embed")
+    full_text: Optional[str] = Field(None, max_length=5_000_000, description="Full paper text if available")
     sections: Optional[dict] = Field(None, description="Optional section map {'Intro': '...', ...}")
     force: bool = Field(False, description="Force re-indexing even if paper chunks already exist")
-    title: Optional[str] = Field(None, description="Paper title")
-    doi: Optional[str] = Field(None, description="Paper DOI")
-    arxiv_id: Optional[str] = Field(None, description="Paper arXiv ID")
-    open_access_url: Optional[str] = Field(None, description="Paper open-access URL")
-    abstract: Optional[str] = Field(None, description="Paper abstract")
+    title: Optional[str] = Field(None, max_length=1000, description="Paper title")
+    doi: Optional[str] = Field(None, max_length=200, description="Paper DOI")
+    arxiv_id: Optional[str] = Field(None, max_length=100, description="Paper arXiv ID")
+    open_access_url: Optional[str] = Field(None, max_length=2000, description="Paper open-access URL")
+    abstract: Optional[str] = Field(None, max_length=30000, description="Paper abstract")
+
+    @field_validator("paper_id")
+    @classmethod
+    def sanitize_paper_id(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("paper_id cannot be blank.")
+        return cleaned
+
+    @field_validator("open_access_url")
+    @classmethod
+    def validate_oa_url(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return v
+        cleaned = v.strip()
+        parsed = urlparse(cleaned)
+        if parsed.scheme.lower() not in ("http", "https"):
+            raise ValueError(f"Forbidden open_access_url scheme '{parsed.scheme}'. Only HTTP and HTTPS are permitted.")
+        return cleaned
 
 
 class ChunkInfo(BaseModel):

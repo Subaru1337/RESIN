@@ -13,9 +13,11 @@ interface PaperCardProps {
   paper: Paper;
   /** When persisted (e.g. from library), pass uuid to enable summary caching */
   persistedId?: string;
+  statusBadge?: React.ReactNode;
+  actionExtra?: React.ReactNode;
 }
 
-export function PaperCard({ paper, persistedId }: PaperCardProps) {
+export function PaperCard({ paper, persistedId, statusBadge, actionExtra }: PaperCardProps) {
   const [saved, setSaved] = useState(false);
   const [summary, setSummary] = useState<PaperSummary | null>(null);
 
@@ -33,7 +35,8 @@ export function PaperCard({ paper, persistedId }: PaperCardProps) {
   return (
     <article className="group rounded-xl border border-border bg-card p-5 sm:p-6 transition-smooth hover:shadow-lift hover:border-foreground/20 animate-fade-up">
       <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+          {statusBadge}
           {paper.year && (
             <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{paper.year}</span>
           )}
@@ -57,7 +60,10 @@ export function PaperCard({ paper, persistedId }: PaperCardProps) {
             </span>
           )}
         </div>
-        <SaveToFolder variant="icon" saved={saved} onSaved={() => setSaved(true)} paper={paper} summary={summary} />
+        <div className="flex items-center gap-1 shrink-0">
+          {actionExtra}
+          <SaveToFolder variant="icon" saved={saved} onSaved={() => setSaved(true)} paper={paper} summary={summary} />
+        </div>
       </div>
 
       <h3 className="font-serif-display text-xl sm:text-2xl font-semibold leading-snug mb-2 text-balance group-hover:text-primary transition-smooth">

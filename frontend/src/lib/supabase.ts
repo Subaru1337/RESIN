@@ -20,7 +20,7 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
   ? createClient(url!, key!)
   : null;
 
-import type { Folder, Paper, PaperSummary, UserPaper, DailyTriage } from "./types";
+import type { Folder, Paper, PaperSummary, DailyTriage } from "./types";
 
 /**
  * Ensures a user record exists in the public.users table matching the auth user.
@@ -239,31 +239,6 @@ export async function savePaperSummary(paperId: string, summary: PaperSummary): 
       },
       { onConflict: "paper_id" }
     );
-  if (error) throw error;
-}
-
-export async function getPapersInFolder(folderId: string): Promise<(UserPaper & { paper: Paper })[]> {
-  if (!supabase) return [];
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data, error } = await supabase
-    .from("user_papers")
-    .select("*, paper:papers(*)")
-    .eq("folder_id", folderId)
-    .eq("user_id", user.id)
-    .order("saved_at", { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []) as (UserPaper & { paper: Paper })[];
-}
-
-export async function updateReadingStatus(userPaperId: string, status: "unread" | "in_progress" | "done") {
-  if (!supabase) return;
-  const { error } = await supabase
-    .from("user_papers")
-    .update({ status })
-    .eq("id", userPaperId);
   if (error) throw error;
 }
 

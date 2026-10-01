@@ -2,10 +2,11 @@ import json
 import queue
 import threading
 from typing import Generator, Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from app.agent.agent import ResearchAgent
 from app.core.auth import get_current_user_id
+from app.core.limiter import limiter
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat_service import (
     clear_paper_chat_history,
@@ -14,18 +15,18 @@ from app.services.chat_service import (
     save_chat_turn,
 )
 from app.services.rag import RAGService
-from app.services.redis_cache import RedisCacheService
 
 from app.core.timing import StageTimer, logger as timing_logger
 
 router = APIRouter()
 rag_service = RAGService()
-cache_service = RedisCacheService()
 research_agent = ResearchAgent()
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("20/minute")
 def chat_endpoint(
+    request: Request,
     payload: ChatRequest,
     user_id: str = Depends(get_current_user_id),
 ):
@@ -40,15 +41,6 @@ def chat_endpoint(
                 title=payload.title,
             )
 
-            cached = cache_service.get_cached_response(canonical_id, payload.message)
-            if cached is not None:
-                timing_logger.info(f"[{timer.request_id}] CACHE HIT")
-                timer.mark("cache_hit")
-                return ChatResponse(**cached)
-            else:
-                timing_logger.info(f"[{timer.request_id}] CACHE MISS")
-                timer.mark("cache_miss")
-
             response = rag_service.answer_question(
                 paper_id=canonical_id,
                 question=payload.message,
@@ -58,8 +50,6 @@ def chat_endpoint(
 
             save_chat_turn(user_id, None, "user", payload.message, paper_id=canonical_id)
             save_chat_turn(user_id, None, "assistant", response.answer, paper_id=canonical_id)
-            if not response.answer.startswith("This paper hasn't") and not response.answer.startswith("Indexing failed:"):
-                cache_service.set_cached_response(canonical_id, payload.message, response.model_dump())
             return response
 
         # If paper_id is omitted, delegate to ResearchAgent
@@ -77,7 +67,9 @@ def chat_endpoint(
 
 
 @router.post("/chat/stream")
+@limiter.limit("20/minute")
 def chat_stream_endpoint(
+    request: Request,
     payload: ChatRequest,
     user_id: str = Depends(get_current_user_id),
 ):
@@ -144,7 +136,9 @@ def chat_stream_endpoint(
 
 
 @router.post("/folder_chat", response_model=ChatResponse)
+@limiter.limit("20/minute")
 def folder_chat_endpoint(
+    request: Request,
     payload: ChatRequest,
     user_id: str = Depends(get_current_user_id),
 ):

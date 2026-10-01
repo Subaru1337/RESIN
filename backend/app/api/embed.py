@@ -1,7 +1,10 @@
 import logging
+import os
+import re
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Path, Request
 from app.core.auth import get_current_user_id
+from app.core.limiter import limiter
 from app.schemas.indexing import IndexPaperRequest, IndexPaperResponse
 from app.services.indexing import IndexingService
 from app.services.open_access import OpenAccessService
@@ -17,9 +20,11 @@ pdf_service = PDFService()
 
 
 @router.post("/papers/{paper_id}/index", response_model=IndexPaperResponse)
+@limiter.limit("10/minute")
 def index_paper_endpoint(
-    paper_id: str,
-    payload: IndexPaperRequest,
+    request: Request,
+    paper_id: str = Path(..., min_length=1, max_length=200, description="Paper identifier or UUID"),
+    payload: IndexPaperRequest = ...,
     user_id: str = Depends(get_current_user_id),
 ):
     """Trigger chunking, embedding, and storage for a paper.
@@ -311,8 +316,10 @@ def index_paper_endpoint(
 
 
 @router.get("/papers/{paper_id}/index-status")
+@limiter.limit("60/minute")
 def get_paper_index_status(
-    paper_id: str,
+    request: Request,
+    paper_id: str = Path(..., min_length=1, max_length=200, description="Paper identifier or UUID"),
     user_id: str = Depends(get_current_user_id),
 ):
     """
@@ -359,20 +366,42 @@ def get_paper_index_status(
 
 
 @router.post("/papers/{paper_id}/upload-pdf", response_model=IndexPaperResponse)
+@limiter.limit("5/minute")
 async def upload_pdf_endpoint(
-    paper_id: str,
+    request: Request,
+    paper_id: str = Path(..., min_length=1, max_length=200, description="Paper identifier or UUID"),
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user_id),
 ):
     """Index a user-uploaded PDF file for any paper (enabling multi-page RAG for paywalled papers)."""
+    MAX_UPLOAD_SIZE = 30 * 1024 * 1024  # 30 MB limit
+    CHUNK_SIZE = 1024 * 1024  # 1 MB chunk
+
     try:
-        content = await file.read()
+        # Stream read in chunks to prevent unbounded memory allocation (OOM DoS)
+        chunks = []
+        total_size = 0
+        while True:
+            chunk = await file.read(CHUNK_SIZE)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_UPLOAD_SIZE:
+                raise HTTPException(status_code=400, detail="File exceeds 30MB limit.")
+            chunks.append(chunk)
+
+        content = b"".join(chunks)
         if not content:
             raise HTTPException(status_code=400, detail="Uploaded file is empty.")
-        if len(content) > 50 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File exceeds 50MB limit.")
+
+        # Magic byte validation
         if not content.startswith(b"%PDF-") and b"%PDF-" not in content[:1024]:
             raise HTTPException(status_code=400, detail="Uploaded file does not have a valid PDF header.")
+
+        # Sanitize filename against path traversal and control characters
+        raw_name = file.filename or "uploaded.pdf"
+        base_name = os.path.basename(raw_name)
+        safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', base_name)[:120] or "uploaded.pdf"
 
         from app.services.paper_resolution import resolve_paper_record
         canonical_id, _ = resolve_paper_record(paper_id=paper_id)
@@ -384,7 +413,7 @@ async def upload_pdf_endpoint(
         res = indexing_service.index_pdf_pages(
             paper_id=canonical_id,
             pages_data=pages_data,
-            document_id=file.filename or "uploaded.pdf",
+            document_id=safe_filename,
         )
         res.paper_id = paper_id
         res.canonical_paper_id = canonical_id

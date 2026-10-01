@@ -7,6 +7,7 @@ import {
   Sparkles,
   Bot,
   MessageSquare,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -161,13 +162,27 @@ function TriageAISummaryDialog({
 
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-5 sm:p-6">
         <DialogHeader className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="h-7 w-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-              <Sparkles className="h-3.5 w-3.5" />
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                <Sparkles className="h-3.5 w-3.5" />
+              </div>
+              <span className="text-xs font-mono-tech uppercase tracking-wider text-muted-foreground">
+                AI Structured Digest
+              </span>
             </div>
-            <span className="text-xs font-mono-tech uppercase tracking-wider text-muted-foreground">
-              AI Structured Digest
-            </span>
+            {!loading && summary && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleGenerate}
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                title="Regenerate summary with AI"
+              >
+                <RotateCw className="h-3 w-3" />
+                Regenerate
+              </Button>
+            )}
           </div>
           <DialogTitle className="font-serif-display text-xl leading-snug">
             {paper.title}

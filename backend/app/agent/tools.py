@@ -91,7 +91,7 @@ def search_papers(
     **kwargs,
 ) -> Dict[str, Any]:
     """Search external academic databases (Semantic Scholar / OpenAlex) for research papers."""
-    from app.api.search import search_papers as api_search
+    from app.api.search import perform_search as api_search
 
     try:
         loop = asyncio.new_event_loop()
@@ -159,7 +159,7 @@ def find_open_access_pdf(paper_id: str, **kwargs) -> Dict[str, Any]:
 
     # Fallback lookup via search API details if not in DB
     if not doi and not arxiv_id and not existing_oa_url:
-        from app.api.search import get_paper_details
+        from app.api.search import perform_get_paper_details as get_paper_details
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -250,7 +250,7 @@ def ingest_paper(
             paper_res = supabase.table("papers").select("id").eq("id", paper_id).execute()
             if not paper_res.data:
                 # Fetch metadata to save basic info
-                from app.api.search import get_paper_details
+                from app.api.search import perform_get_paper_details as get_paper_details
                 try:
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
@@ -387,7 +387,7 @@ def get_paper(paper_id: str, **kwargs) -> Dict[str, Any]:
             logger.warning(f"Could not fetch paper {paper_id} from Supabase: {e}")
 
     # Fallback to search API
-    from app.api.search import get_paper_details
+    from app.api.search import perform_get_paper_details as get_paper_details
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

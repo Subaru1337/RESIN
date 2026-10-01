@@ -320,8 +320,11 @@ export default function Library() {
 
           <div className="grid gap-4">
             {sortedPapers.map((up) => (
-              <div key={up.id} className="relative">
-                <div className="absolute -left-3 top-6 hidden md:flex items-center gap-1">
+              <PaperCard
+                key={up.id}
+                paper={up.paper}
+                persistedId={up.paper.id}
+                statusBadge={
                   <StatusPill
                     value={up.status}
                     onChange={async (s) => {
@@ -329,20 +332,22 @@ export default function Library() {
                       fetchPapers();
                     }}
                   />
-                </div>
-                <PaperCard paper={up.paper} persistedId={up.paper.id} />
-                <button
-                  onClick={async () => {
-                    await removeUserPaper(up.id);
-                    fetchPapers();
-                    toast.success("Removed");
-                  }}
-                  className="absolute top-3 right-12 text-xs text-muted-foreground hover:text-destructive transition-smooth"
-                  title="Remove from library"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+                }
+                actionExtra={
+                  <button
+                    onClick={async () => {
+                      await removeUserPaper(up.id);
+                      fetchPapers();
+                      toast.success("Removed from library");
+                    }}
+                    className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-smooth"
+                    title="Remove from library"
+                    aria-label="Remove from library"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                }
+              />
             ))}
           </div>
         </section>
@@ -351,20 +356,36 @@ export default function Library() {
   );
 }
 
-function StatusPill({ value, onChange }: { value: "unread" | "in_progress" | "done"; onChange: (s: "unread" | "in_progress" | "done") => void }) {
+function StatusPill({
+  value,
+  onChange,
+}: {
+  value: "unread" | "in_progress" | "done";
+  onChange: (s: "unread" | "in_progress" | "done") => void;
+}) {
   const next = value === "unread" ? "in_progress" : value === "in_progress" ? "done" : "unread";
   const colors = {
-    unread: "bg-muted text-muted-foreground",
-    in_progress: "bg-accent/20 text-accent border-accent/40",
-    done: "bg-primary/15 text-primary border-primary/40",
+    unread: "bg-secondary text-muted-foreground hover:bg-secondary/80 border-border",
+    in_progress: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
+    done: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20",
   } as const;
+  const labels = {
+    unread: "Unread",
+    in_progress: "In Progress",
+    done: "Done",
+  };
   return (
     <button
       onClick={() => onChange(next)}
-      className={`text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border border-border transition-smooth ${colors[value]}`}
-      title="Click to advance status"
+      className={`text-[10px] font-mono-tech uppercase tracking-wider px-2 py-0.5 rounded-full border transition-smooth font-medium inline-flex items-center gap-1.5 shrink-0 ${colors[value]}`}
+      title="Click to advance reading status (Unread → In Progress → Done)"
     >
-      {value.replace("_", " ")}
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          value === "done" ? "bg-emerald-500" : value === "in_progress" ? "bg-amber-500" : "bg-muted-foreground/60"
+        }`}
+      />
+      {labels[value]}
     </button>
   );
 }

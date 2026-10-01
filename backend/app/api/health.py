@@ -1,9 +1,7 @@
 from fastapi import APIRouter
 import httpx
-from app.services.redis_cache import RedisCacheService
 
 router = APIRouter()
-redis_service = RedisCacheService()
 
 
 @router.get("/health")
@@ -27,6 +25,5 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "RESIN RAG API",
-        "redis": "connected" if redis_service.available else "disconnected",
         "semantic_scholar": ss_status,
     }

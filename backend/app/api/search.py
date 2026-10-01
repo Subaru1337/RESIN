@@ -1,9 +1,10 @@
 import logging
 import time
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Path, Request
 import httpx
 from app.core.config import settings
+from app.core.limiter import limiter
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -177,9 +178,8 @@ async def fetch_openalex_paper(paper_id: str) -> dict:
         raise HTTPException(status_code=resp.status_code, detail="OpenAlex paper not found")
 
 
-@router.get("/search")
-async def search_papers(query: str = Query(..., min_length=1), limit: int = 20):
-    """Proxy paper search to Semantic Scholar API with automatic arXiv direct lookup and OpenAlex fallback."""
+async def perform_search(query: str, limit: int = 20) -> dict:
+    """Core search logic for Semantic Scholar with arXiv direct lookup and OpenAlex fallback."""
     clean_q = query.strip()
     cache_key = f"search:{clean_q.lower()}:{limit}"
     now = time.time()
@@ -236,9 +236,8 @@ async def search_papers(query: str = Query(..., min_length=1), limit: int = 20):
         raise HTTPException(status_code=502, detail="Failed to fetch papers from both Semantic Scholar and OpenAlex")
 
 
-@router.get("/{paper_id}")
-async def get_paper_details(paper_id: str):
-    """Proxy single paper details request to Semantic Scholar with arXiv and OpenAlex fallback."""
+async def perform_get_paper_details(paper_id: str) -> dict:
+    """Fetch single paper details from Semantic Scholar with arXiv and OpenAlex fallback."""
     cache_key = f"paper:{paper_id}"
     now = time.time()
 
@@ -292,3 +291,24 @@ async def get_paper_details(paper_id: str):
         if cache_key in _cache:
             return _cache[cache_key]["data"]
         raise HTTPException(status_code=404, detail="Paper details not found on Semantic Scholar or OpenAlex")
+
+
+@router.get("/search")
+@limiter.limit("30/minute")
+async def search_papers(
+    request: Request,
+    query: str = Query(..., min_length=1, max_length=500, description="Search query string"),
+    limit: int = Query(20, ge=1, le=100, description="Max papers to return (1-100)"),
+):
+    """Proxy paper search to Semantic Scholar API with automatic arXiv direct lookup and OpenAlex fallback."""
+    return await perform_search(query=query, limit=limit)
+
+
+@router.get("/{paper_id}")
+@limiter.limit("60/minute")
+async def get_paper_details(
+    request: Request,
+    paper_id: str = Path(..., min_length=1, max_length=200, description="Paper identifier or DOI"),
+):
+    """Proxy single paper details request to Semantic Scholar with arXiv and OpenAlex fallback."""
+    return await perform_get_paper_details(paper_id=paper_id)

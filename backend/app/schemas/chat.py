@@ -1,19 +1,35 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatMessage(BaseModel):
-    role: str = Field(..., description="Role of the speaker: 'user' or 'assistant'")
-    content: str = Field(..., description="Message text content")
+    role: str = Field(..., description="Role of the speaker: 'user' or 'assistant'", pattern="^(user|assistant|system)$")
+    content: str = Field(..., min_length=1, max_length=10000, description="Message text content")
+
+    @field_validator("content")
+    @classmethod
+    def sanitize_content(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Message content cannot be empty.")
+        return cleaned
 
 
 class ChatRequest(BaseModel):
-    paper_id: Optional[str] = Field(None, description="Target paper UUID (optional for library chat)")
-    doi: Optional[str] = Field(None, description="Paper DOI for exact canonical resolution")
-    title: Optional[str] = Field(None, description="Paper title for resolution")
-    message: str = Field(..., description="User question / prompt")
-    history: Optional[List[ChatMessage]] = Field(default=[], description="Previous conversation turns")
-    folder_id: Optional[str] = Field(None, description="Optional folder UUID for scoped search")
+    paper_id: Optional[str] = Field(None, max_length=200, description="Target paper UUID (optional for library chat)")
+    doi: Optional[str] = Field(None, max_length=200, description="Paper DOI for exact canonical resolution")
+    title: Optional[str] = Field(None, max_length=500, description="Paper title for resolution")
+    message: str = Field(..., min_length=1, max_length=5000, description="User question / prompt")
+    history: Optional[List[ChatMessage]] = Field(default=[], max_length=50, description="Previous conversation turns (max 50)")
+    folder_id: Optional[str] = Field(None, max_length=100, description="Optional folder UUID for scoped search")
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError("Message cannot be empty or only whitespace.")
+        return cleaned
 
 
 class Citation(BaseModel):

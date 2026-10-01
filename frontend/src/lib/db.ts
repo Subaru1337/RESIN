@@ -176,9 +176,18 @@ export async function listCitationEdges(paperIds: string[]): Promise<CitationEdg
 const BACKEND_URL = import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000";
 
 export async function syncCitationEdges(paperIds?: string[]): Promise<{ direct_count: number; shared_count: number; total_edges: number }> {
+  let token: string | undefined;
+  if (supabase) {
+    const { data } = await supabase.auth.getSession();
+    token = data.session?.access_token;
+  }
+
   const res = await fetch(`${BACKEND_URL}/api/citations/sync-citations`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ paper_ids: paperIds ?? null }),
   });
   if (!res.ok) {

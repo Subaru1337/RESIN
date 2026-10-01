@@ -87,7 +87,7 @@ Rules:
 - Avoid jargon. Be concise and factual.
 - Each field must be 1–3 sentences only.
 - Do NOT add any text outside the JSON.
-- If information is missing, infer cautiously or state "Not واضح from provided data".
+- If information is missing, infer cautiously or state "Not clear from provided data".
 
 Return STRICT JSON with exactly these keys:
 {

@@ -5,20 +5,6 @@
 import type { Paper } from "@/lib/types";
 
 const BACKEND_URL = import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000";
-const DIRECT_BASE = "https://api.semanticscholar.org/graph/v1";
-const SS_KEY = import.meta.env.VITE_SEMANTIC_SCHOLAR_API_KEY as string | undefined;
-
-const ssHeaders = (): HeadersInit => (SS_KEY ? { "x-api-key": SS_KEY } : {});
-const FIELDS = [
-  "paperId",
-  "externalIds",
-  "title",
-  "abstract",
-  "year",
-  "authors.name",
-  "citationCount",
-  "openAccessPdf",
-].join(",");
 
 interface SSAuthor { name: string }
 interface SSPaper {
@@ -68,28 +54,6 @@ export async function searchPapers(query: string, limit = 20): Promise<Paper[]> 
   }
 
   let errorDetail = `Search request failed with status ${res.status}`;
-  try {
-    const errJson = await res.json();
-    if (errJson.detail) errorDetail = errJson.detail;
-  } catch {
-    // Keep generic error detail if JSON parsing fails
-  }
-  throw new Error(errorDetail);
-}
-
-export async function getPaperById(ssId: string): Promise<Paper | null> {
-  // Route via FastAPI Backend Search Proxy
-  const proxyUrl = `${BACKEND_URL}/api/papers/${ssId}`;
-  const res = await fetch(proxyUrl);
-  if (res.ok) {
-    const p = (await res.json()) as SSPaper;
-    return toPaper(p);
-  }
-  if (res.status === 404) {
-    return null;
-  }
-
-  let errorDetail = `Paper fetch failed with status ${res.status}`;
   try {
     const errJson = await res.json();
     if (errJson.detail) errorDetail = errJson.detail;

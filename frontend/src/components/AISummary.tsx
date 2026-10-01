@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Sparkles, ChevronDown, ChevronUp, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generatePaperSummary, isGeminiConfigured } from "@/lib/gemini";
 import { saveSummary } from "@/lib/db";
@@ -64,16 +64,33 @@ export function AISummary({ paper, initial, persistPaperId }: AISummaryProps) {
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden animate-fade-up">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-secondary/40 hover:bg-secondary transition-smooth"
-      >
-        <span className="flex items-center gap-2 text-sm font-medium">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          AI structured digest
-        </span>
-        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
+      <div className="w-full flex items-center justify-between px-4 py-2.5 bg-secondary/40 hover:bg-secondary/60 transition-smooth">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex-1 flex items-center justify-between text-left"
+        >
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            AI structured digest
+          </span>
+          <div className="flex items-center gap-2">
+            {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </div>
+        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleGenerate();
+          }}
+          disabled={loading}
+          className="h-7 w-7 ml-2 text-muted-foreground hover:text-foreground"
+          title="Regenerate summary"
+        >
+          <RotateCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
       {open && (
         <div className="p-4 space-y-3">
           {sections.map((s) => {

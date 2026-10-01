@@ -64,13 +64,15 @@ def resolve_paper_record(
     aid = arxiv_id or extract_arxiv_id(clean_id) or extract_arxiv_id(doi) or extract_arxiv_id(open_access_url)
     if client:
         try:
-            # Query by semantic_scholar_id, arxiv_id, or doi
-            or_clauses = [f"semantic_scholar_id.eq.{clean_id}"]
+            # Query by semantic_scholar_id, arxiv_id, or doi (sanitized against PostgREST filter syntax)
+            safe_clean_id = re.sub(r'[,()\s]', '', clean_id)
+            or_clauses = [f"semantic_scholar_id.eq.{safe_clean_id}"]
             if aid:
-                or_clauses.append(f"arxiv_id.eq.{aid}")
-                or_clauses.append(f"semantic_scholar_id.eq.arxiv_{aid}")
+                safe_aid = re.sub(r'[,()\s]', '', aid)
+                or_clauses.append(f"arxiv_id.eq.{safe_aid}")
+                or_clauses.append(f"semantic_scholar_id.eq.arxiv_{safe_aid}")
             if doi and isinstance(doi, str) and doi.strip():
-                clean_doi = doi.strip().replace("https://doi.org/", "")
+                clean_doi = re.sub(r'[,()\s]', '', doi.strip().replace("https://doi.org/", ""))
                 or_clauses.append(f"doi.eq.{clean_doi}")
                 or_clauses.append(f"doi.eq.https://doi.org/{clean_doi}")
             res = client.table("papers").select("*").or_(",".join(or_clauses)).limit(1).execute()
