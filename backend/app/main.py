@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import chat, embed, health, search, citations
+from app.api import chat, embed, health, search, citations, summarize, news
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.core.config import settings
@@ -45,6 +45,8 @@ app.include_router(chat.router, prefix="/api", tags=["RAG Chat"])
 app.include_router(embed.router, prefix="/api", tags=["Paper Indexing"])
 app.include_router(citations.router, prefix="/api/citations", tags=["Citations Graph"])
 app.include_router(search.router, prefix="/api/papers", tags=["Paper Search Proxy"])
+app.include_router(summarize.router, prefix="/api", tags=["Summaries"])
+app.include_router(news.router, prefix="/api", tags=["News"])
 
 
 @app.get("/")

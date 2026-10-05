@@ -23,6 +23,10 @@ class Settings(BaseSettings):
         "",
         validation_alias=AliasChoices("SEMANTIC_SCHOLAR_API_KEY", "VITE_SEMANTIC_SCHOLAR_API_KEY"),
     )
+    news_api_key: str = Field(
+        "",
+        validation_alias=AliasChoices("NEWS_API_KEY", "VITE_NEWS_API_KEY"),
+    )
     
     frontend_url: str = "http://localhost:5173"
     allowed_origins: str = Field(

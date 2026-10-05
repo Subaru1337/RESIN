@@ -67,8 +67,8 @@ export default function Feed() {
       {!isNewsConfigured && (
         <EmptyState
           icon={Newspaper}
-          title="Add your NewsAPI key to load the feed"
-          desc="Get a free key at newsapi.org and add VITE_NEWS_API_KEY to your .env file."
+          title="Backend connection required"
+          desc="Ensure the RESIN backend server is running to fetch news articles."
         />
       )}
 

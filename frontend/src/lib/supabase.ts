@@ -1,10 +1,9 @@
 /**
  * Supabase client. Reads keys from Vite env vars.
- * To wire your own Supabase project, create a `.env` file at project root with:
+ * To wire your own Supabase project, create a `.env` file at frontend root with:
  *   VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
  *   VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
- *   VITE_NEWS_API_KEY=...           (newsapi.org)
- *   VITE_GEMINI_API_KEY=...         (Google AI Studio — used by edge functions; optional client-side fallback)
+ *   VITE_RAG_BACKEND_URL=...        (FastAPI RAG backend)
  *
  * The schema expected matches your provided PostgreSQL schema (papers, paper_summaries,
  * folders, user_papers, feed_items, citation_edges, users).

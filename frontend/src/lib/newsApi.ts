@@ -1,10 +1,14 @@
 /**
- * NewsAPI.org client. Requires VITE_NEWS_API_KEY in .env.
- * Free dev keys are localhost-only; for prod, route this through an edge function.
+ * News client (server-proxied).
+ * Routes news requests through the FastAPI backend to keep API keys secure.
  */
 import type { FeedItem } from "@/lib/types";
 
-const KEY = import.meta.env.VITE_NEWS_API_KEY as string | undefined;
+const RAG_BACKEND_URL = (
+  (import.meta.env.VITE_RAG_BACKEND_URL as string | undefined) || "http://localhost:8000"
+).replace(/\/$/, "");
+
+export const isNewsConfigured = Boolean(RAG_BACKEND_URL);
 
 interface NewsArticle {
   source: { name: string };
@@ -26,25 +30,23 @@ const toFeedItem = (a: NewsArticle, topics: string[]): FeedItem => ({
   image_url: a.urlToImage,
 });
 
-export const isNewsConfigured = Boolean(KEY);
-
 export async function fetchTechNews(query: string, topics: string[] = []): Promise<FeedItem[]> {
-  if (!KEY) return [];
   const q = encodeURIComponent(query || "(AI OR machine learning OR robotics OR LLM OR biotech)");
-  const url = `https://newsapi.org/v2/everything?q=${q}&language=en&sortBy=publishedAt&pageSize=30&apiKey=${KEY}`;
-  
-  const res = await fetch(url);
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => "Unknown error");
-    throw new Error(`NewsAPI failed (${res.status}): ${errorText}`);
-  }
-  const json = await res.json();
-  
-  if (!json.articles || !Array.isArray(json.articles)) {
+  const url = `${RAG_BACKEND_URL}/api/news?q=${q}&page_size=30`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      return [];
+    }
+    const json = await res.json();
+    if (!json.articles || !Array.isArray(json.articles)) {
+      return [];
+    }
+    return (json.articles as NewsArticle[])
+      .filter((a) => a.title && a.title !== "[Removed]" && a.url)
+      .map((a) => toFeedItem(a, topics));
+  } catch {
     return [];
   }
-
-  return (json.articles as NewsArticle[])
-    .filter((a) => a.title && a.title !== "[Removed]" && a.url)
-    .map((a) => toFeedItem(a, topics));
 }

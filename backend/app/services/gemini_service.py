@@ -203,3 +203,55 @@ class GeminiService:
             raise last_exc
         raise RuntimeError("Gemini API call failed after retries.")
 
+    @classmethod
+    def generate_content(
+        cls,
+        prompt: str,
+        response_mime_type: Optional[str] = None,
+        temperature: float = 0.3,
+    ) -> str:
+        """
+        Generate text content with multi-model failover, cooldown tracking, and retry.
+        Used by server-side endpoints to keep API keys secure.
+        """
+        ensure_gemini_configured()
+        candidate_models = cls.get_prioritized_models([
+            settings.gemini_chat_model,
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-flash-lite-latest",
+            "gemini-flash-latest",
+        ])
+
+        last_err = None
+        for model_name in candidate_models:
+            if cls.is_model_on_cooldown(model_name):
+                continue
+            for attempt in range(1, 3):
+                try:
+                    generation_config: dict = {"temperature": temperature}
+                    if response_mime_type:
+                        generation_config["response_mime_type"] = response_mime_type
+                    model = genai.GenerativeModel(model_name=model_name, generation_config=generation_config)
+                    resp = model.generate_content(prompt)
+                    text = resp.text if resp else ""
+                    if text:
+                        return text
+                except Exception as e:
+                    last_err = e
+                    is_daily, is_transient, _ = classify_gemini_error(e)
+                    if is_daily:
+                        cls.mark_model_cooldown(model_name, 300.0, "Daily quota exhausted")
+                        break
+                    if is_transient:
+                        cls.mark_model_cooldown(model_name, 60.0, f"Rate limited: {e}")
+                        break
+                    if attempt == 1:
+                        time.sleep(1.0)
+                        continue
+                    break
+
+        if last_err:
+            raise last_err
+        raise RuntimeError("Failed to generate content across all candidate models.")
+

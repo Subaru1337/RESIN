@@ -29,7 +29,7 @@ export function AISummary({ paper, initial, persistPaperId }: AISummaryProps) {
 
   const handleGenerate = async () => {
     if (!isGeminiConfigured) {
-      toast.error("Add VITE_GEMINI_API_KEY to .env to generate summaries");
+      toast.error("RAG Backend is required to generate summaries");
       return;
     }
     setLoading(true);
