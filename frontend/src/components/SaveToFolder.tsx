@@ -3,7 +3,7 @@ import { Bookmark, Check, FolderPlus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { getFolders, createFolder, savePaperToFolder, savePaperSummary } from "@/lib/supabase";
+import { listFolders, createFolder, savePaperToFolder, savePaperSummary } from "@/lib/db";
 import type { Folder, Paper, PaperSummary } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -34,7 +34,7 @@ export function SaveToFolder({
   const [name, setName] = useState("");
 
   useEffect(() => {
-    if (open) getFolders().then(setFolders).catch(() => setFolders([]));
+    if (open) listFolders().then(setFolders).catch(() => setFolders([]));
   }, [open]);
 
   const handleSave = async (id: string) => {

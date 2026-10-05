@@ -1,4 +1,4 @@
-﻿import ReactMarkdown from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   MessageSquare, Send, Loader2, Sparkles, Database, Upload,
@@ -12,6 +12,22 @@ import {
 } from "@/lib/ragApi";
 import type { Paper, RagChatMessage } from "@/lib/types";
 import { toast } from "sonner";
+
+import { ReasoningText } from "@/components/ui/reasoning-text";
+
+const RAG_SEARCH_PHRASES = [
+  "Searching paper chunks",
+  "Reading context passages",
+  "Connecting details",
+  "Forming a response",
+];
+
+const RAG_INDEX_PHRASES = [
+  "Fetching paper document",
+  "Extracting full text & sections",
+  "Chunking semantic passages",
+  "Generating vector embeddings",
+];
 
 interface PaperChatProps {
   paper: Paper;
@@ -343,9 +359,15 @@ export function PaperChat({ paper, isInLibrary = false }: PaperChatProps) {
             ))}
 
             {loading && !streaming && (
-              <div className="flex items-center gap-2 text-muted-foreground text-xs p-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <span>{loadingStatus || "Searching paper chunks & generating answer..."}</span>
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-secondary/50 border border-border/60 w-fit backdrop-blur-sm shadow-sm">
+                <ReasoningText
+                  phrases={
+                    loadingStatus?.toLowerCase().includes("indexing")
+                      ? RAG_INDEX_PHRASES
+                      : RAG_SEARCH_PHRASES
+                  }
+                  variant="cascade"
+                />
               </div>
             )}
           </div>

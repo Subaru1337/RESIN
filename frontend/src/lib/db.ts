@@ -110,7 +110,7 @@ export async function upsertPaper(p: Paper): Promise<Paper> {
   return data as Paper;
 }
 
-export async function savePaperToFolder(paper: Paper, folderId: string): Promise<void> {
+export async function savePaperToFolder(paper: Paper, folderId: string): Promise<string> {
   const uid = await getUserId();
   if (!uid || !supabase) throw new Error("Not authenticated");
   
@@ -122,6 +122,7 @@ export async function savePaperToFolder(paper: Paper, folderId: string): Promise
     status: "unread",
   });
   if (error && !error.message.includes("duplicate")) throw error;
+  return stored.id;
 }
 
 export async function listUserPapers(folderId?: string): Promise<(UserPaper & { paper: Paper })[]> {
@@ -161,6 +162,11 @@ export async function saveSummary(s: PaperSummary): Promise<void> {
   if (error) throw error;
 }
 
+/** Convenience alias matching supabase.ts signature: savePaperSummary(paperId, summary). */
+export async function savePaperSummary(paperId: string, summary: PaperSummary): Promise<void> {
+  return saveSummary({ ...summary, paper_id: paperId });
+}
+
 export async function listCitationEdges(paperIds: string[]): Promise<CitationEdge[]> {
   if (!supabase || paperIds.length === 0) return [];
   const { data, error } = await supabase
@@ -195,7 +201,9 @@ export async function syncCitationEdges(paperIds?: string[]): Promise<{ direct_c
     try {
       const err = await res.json();
       if (err.detail) detail = err.detail;
-    } catch {}
+    } catch {
+      // ignore JSON parse error and use default status message
+    }
     throw new Error(detail);
   }
   return res.json();
@@ -219,7 +227,7 @@ export async function listPaperEmbeddings(paperIds: string[]): Promise<Record<st
         try {
           map[row.paper_id] = JSON.parse(row.embedding);
         } catch {
-          map[row.paper_id] = row.embedding.replace(/[\[\]]/g, "").split(",").map(Number);
+          map[row.paper_id] = row.embedding.replace(/[[\]]/g, "").split(",").map(Number);
         }
       }
     }
@@ -278,14 +286,14 @@ const ACADEMIC_STOP_WORDS = new Set([
 ]);
 
 function cleanWord(w: string): string {
-  return w.toLowerCase().replace(/[^a-z0-9\-]/g, "");
+  return w.toLowerCase().replace(/[^a-z0-9-]/g, "");
 }
 
 function extractPaperFeatures(title: string, abstract: string | null): { unigrams: string[]; bigrams: string[] } {
   const text = `${title} ${abstract ?? ""}`;
   const unigrams = text
     .toLowerCase()
-    .replace(/[^a-z0-9\- ]/g, " ")
+    .replace(/[^a-z0-9- ]/g, " ")
     .split(/\s+/)
     .map(cleanWord)
     .filter((w) => w.length > 2 && !ACADEMIC_STOP_WORDS.has(w));
@@ -390,7 +398,7 @@ export function computeTopicEdges(
 
       // Compute TF-IDF similarity
       let tfidfScore = 0;
-      const sharedTerms: { term: string; contrib: number } = [] as any;
+      const sharedTerms: { term: string; contrib: number }[] = [];
       const vecA = vectors[i].vec;
       const vecB = vectors[j].vec;
 

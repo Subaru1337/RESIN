@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 from typing import Any, Dict, Optional, Tuple
 from app.core.supabase import get_supabase_client

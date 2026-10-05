@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { getFolders, createFolder, deleteFolder } from "@/lib/supabase";
+import { listFolders as getFolders, createFolder, deleteFolder } from "@/lib/db";
 import { listUserPapers, removeUserPaper, updateUserPaper } from "@/lib/db";
 import { isSupabaseConfigured } from "@/lib/supabase";
+
 import { PageHeader } from "@/components/PageHeader";
 import { ConfigBanner } from "@/components/ConfigBanner";
 import { PaperCard } from "@/components/PaperCard";
