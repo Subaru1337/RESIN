@@ -40,7 +40,18 @@ The core computation and retrieval backend for **RESIN**, built with Python 3.11
 | `POST` | `/api/papers/{id}/upload-pdf` | Indexes user-uploaded PDF file for any paper |
 | `POST` | `/api/agent/stream` | Autonomous multi-paper research agent stream (ReAct loop) |
 | `GET` | `/api/papers/search` | Unified search proxy across Semantic Scholar and OpenAlex |
+| `POST` | `/api/citations/sync` | Extracts and syncs citation edges across papers for graph view |
+| `GET` | `/api/citations/{paper_id}/edges` | Retrieves direct citation connections for a specific paper |
 | `GET` | `/health` | Service health status and cache check |
+
+---
+
+## 🛡 Security & Reliability
+
+- **Rate Limiting (`slowapi`)**: Protects resource-intensive RAG embedding and agent endpoints against denial-of-service and quota exhaustion.
+- **SSRF Validation**: Sanitizes and validates external PDF URLs before outbound HTTP requests.
+- **SQL / PostgREST Injection Guard**: Escapes and sanitizes queries against Supabase PostgREST syntax.
+- **Graceful Failover**: Automatic exponential jitter retry and multi-candidate model fallback on Gemini capacity spikes.
 
 ---
 
@@ -83,3 +94,9 @@ VITE_GEMINI_CHAT_MODEL="models/gemini-3.5-flash-lite"
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 Interactive Swagger API documentation will be available at `http://localhost:8000/docs`.
+
+### 5. Run Tests
+```bash
+pytest tests
+```
+
