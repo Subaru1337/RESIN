@@ -33,6 +33,7 @@ RESIN/
 │   │   ├── api/                        # HTTP & SSE API Endpoints
 │   │   │   ├── agent.py                # /api/agent/run and /api/agent/stream
 │   │   │   ├── chat.py                 # /api/chat (sync) and /api/chat/stream (SSE)
+│   │   │   ├── citations.py            # /api/citations/sync and /api/citations/{id}/edges
 │   │   │   ├── embed.py                # /api/papers/{id}/index, /index-status & /upload-pdf
 │   │   │   ├── health.py               # /health and Redis check
 │   │   │   └── search.py               # /api/papers/search (Semantic Scholar + OpenAlex proxy)
@@ -59,33 +60,37 @@ RESIN/
 │   │   └── main.py                     # FastAPI application entrypoint & CORS middleware
 │   ├── evaluation/                     # Academic Benchmarking Suite for Research Paper
 │   │   ├── benchmark_dataset.json      # Golden Q&A evaluation dataset across papers
-│   │   ├── evaluator.py                # RAGEvaluator engine (IR, Lexical, RAGAS metrics)
-│   │   ├── metrics.py                  # Pure mathematical formulations (MRR, NDCG, BLEU, ROUGE, Faithfulness)
-│   │   ├── run_eval.py                 # CLI benchmark runner with LaTeX/CSV exports
-│   │   └── results/                    # Generated benchmark tables, CSVs, and LaTeX code
+│   │   │   ├── evaluator.py            # RAGEvaluator engine (IR, Lexical, RAGAS metrics)
+│   │   │   ├── metrics.py              # Pure mathematical formulations (MRR, NDCG, BLEU, ROUGE, Faithfulness)
+│   │   │   ├── run_eval.py             # CLI benchmark runner with LaTeX/CSV exports
+│   │   │   └── results/                # Generated benchmark tables, CSVs, and LaTeX code
 │   ├── migrations/                     # PostgreSQL & pgvector SQL migrations
 │   │   ├── 20260729_add_pgvector_paper_chunks.sql
 │   │   ├── 20260810_add_chat_history_and_paper_embeddings_function.sql
 │   │   ├── 20260904_agent_runs_and_page_numbers.sql
 │   │   ├── 20260922_add_indexing_status_to_papers.sql # Indexing status & error diagnostics
 │   │   └── full_rag_setup.sql          # Complete database & RPC setup script
-│   ├── requirements.txt                # Backend dependencies
+│   ├── requirements.txt                # Backend dependencies (fastapi, slowapi, pypdf, pytest)
 │   ├── .gitignore                      # Backend-specific ignore rules
 │   └── .env.example                    # Backend environment template
 │
 ├── frontend/                            # React 18 + Vite + TypeScript Frontend
 │   ├── src/
 │   │   ├── components/                 # UI Components
+│   │   │   ├── AppShell.tsx            # Fixed architectural logo & vertical floating dock layout
 │   │   │   ├── DailyTriageSection.tsx  # "Today's Top Reads" AI-curated banner
 │   │   │   ├── PaperCard.tsx           # Paper preview card with save, cite, and chat triggers
 │   │   │   ├── PaperChat.tsx           # Interactive RAG Q&A drawer with real-time SSE streaming
 │   │   │   ├── ResearchAgentView.tsx   # Multi-paper agent conversation interface
-│   │   │   └── ui/                     # Shadcn UI primitives (Button, Dialog, Input, etc.)
+│   │   │   └── ui/                     # Shadcn UI primitives + FloatingDock + ReasoningText
+│   │   │       ├── floating-dock.tsx   # Framer Motion vertical floating navigation dock
+│   │   │       └── reasoning-text.tsx  # Dynamic agent reasoning loading effect
 │   │   ├── lib/                        # Client-side API & Utility Wrappers
+│   │   │   ├── db.ts                   # Canonical library CRUD, folders, and citation edges
 │   │   │   ├── gemini.ts               # Resilient AI summary engine with 503 retry & model failover
 │   │   │   ├── ragApi.ts               # Backend RAG API client (streamPaperRAG, indexPaper, askPaperRAG)
 │   │   │   ├── semanticScholar.ts      # Client search and metadata fetcher
-│   │   │   ├── supabase.ts             # Supabase Auth, client initialization, daily_triage queries
+│   │   │   ├── supabase.ts             # Supabase client initialization & auth helpers
 │   │   │   └── types.ts                # Domain models (Paper, UserPaper, Citation, TriageItem)
 │   │   ├── pages/                      # Application Route Views
 │   │   │   ├── Agent.tsx               # Autonomous Research Agent page

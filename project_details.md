@@ -22,10 +22,12 @@
 +-----------------------------------------------------------------------------------------+
 |                                  USER WORKSTATION (FRONTEND)                            |
 |                                                                                         |
-|   React 18 + Vite + TypeScript + Tailwind CSS                                           |
+|   React 18 + Vite + TypeScript + Tailwind CSS + Framer Motion                           |
+|   - Vertical Floating Dock Navigation (Framer Motion spring physics & cursor tracking)  |
 |   - Papers Hub & Search Proxy (Semantic Scholar + OpenAlex)                             |
-|   - Personal Library & Custom Folders                                                   |
-|   - Interactive PaperChat Drawer (SSE Stream Reader + Page Citation Badges)             |
+|   - Personal Library & Custom Folders (Consolidated db.ts CRUD)                         |
+|   - Interactive PaperChat Drawer (ReasoningText live agent states + Page Citations)     |
+|   - Citation Network Graph (Direct citation connections + TF-IDF semantic edges)        |
 |   - Autonomous Research Agent Interface (Multi-turn tool-call logs)                    |
 |   - "Today's Top Reads" Daily Triage Section                                            |
 +------------------------------------+----------------------------------------------------+

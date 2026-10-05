@@ -7,6 +7,9 @@ The user-facing client for **RESIN**, built with React 18, Vite, TypeScript, and
 ## 🚀 Key Features & Capabilities
 
 - **Interactive Paper Hub**: Live academic search powered by Semantic Scholar & OpenAlex proxies, with instant citation previews and quick-save capabilities.
+- **Vertical Floating Dock Navigation (`FloatingDock`)**: Suspended glassmorphic navigation dock on the left with interactive Framer Motion spring physics, distance-based cursor magnification, and tooltips.
+- **Dynamic Agent Reasoning States (`ReasoningText`)**: Real-time agent status effect during RAG retrieval and indexing with staggered character transitions and breathing glow (*"Searching paper chunks…"*, *"Connecting details…"*, *"Forming a response…"*) replacing static spinners.
+- **Fixed Architectural Branding**: Fixed, non-animating top-left header logo with zero layout shift.
 - **Section & Page-Aware RAG Drawer (`PaperChat`)**:
   - Connects to FastAPI `/api/chat/stream` via Server-Sent Events (SSE).
   - Real-time token rendering with an average Time-to-First-Token (TTFT) of ~1.1 seconds.
@@ -18,7 +21,8 @@ The user-facing client for **RESIN**, built with React 18, Vite, TypeScript, and
   - Interactive multi-turn chat with ReAct tool-execution logs.
   - Real-time display of cross-paper comparisons and literature syntheses.
 - **Personal Library & Reference Exports (`Library.tsx`)**:
-  - Custom folder categorization and reading status management (`unread`, `in_progress`, `done`).
+  - Consolidated CRUD in `lib/db.ts` for folders, papers, and citation graph edges.
+  - Reading status management (`unread`, `in_progress`, `done`).
   - One-click reference exports to BibTeX, APA, and MLA formats.
 - **Daily Research Triage (`DailyTriageSection`)**:
   - Automated "Today's Top Reads" banner highlighting AI-curated daily papers tailored to the user's research topics.
@@ -28,6 +32,7 @@ The user-facing client for **RESIN**, built with React 18, Vite, TypeScript, and
 ## 🛠 Tech Stack
 
 - **Core**: React 18, TypeScript, Vite
+- **Animations & Physics**: Framer Motion (floating dock magnification, spring physics, staggered text transitions)
 - **Styling**: Tailwind CSS, Shadcn UI primitives, Lucide Icons, Sonner (toast notifications)
 - **Data Fetching & State**: TanStack Query (React Query) v5
 - **Authentication & Database**: Supabase JS Client (v2) with Row Level Security (RLS)
