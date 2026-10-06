@@ -4,7 +4,7 @@
  */
 import type { Paper } from "@/lib/types";
 
-const BACKEND_URL = import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = (import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 interface SSAuthor { name: string }
 interface SSPaper {

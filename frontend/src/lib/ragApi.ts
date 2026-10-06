@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import { PaperIndexStatus, RagChatMessage, RagChatResponse, RagIndexResponse } from "./types";
 
-const BACKEND_URL = import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = (import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 async function getAuthHeader(): Promise<HeadersInit> {
   const { data } = await supabase.auth.getSession();

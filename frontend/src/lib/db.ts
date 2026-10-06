@@ -179,7 +179,7 @@ export async function listCitationEdges(paperIds: string[]): Promise<CitationEdg
   );
 }
 
-const BACKEND_URL = import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = (import.meta.env.VITE_RAG_BACKEND_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 export async function syncCitationEdges(paperIds?: string[]): Promise<{ direct_count: number; shared_count: number; total_edges: number }> {
   let token: string | undefined;
