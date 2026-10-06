@@ -1,7 +1,12 @@
 import logging
+import warnings
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+# Silence upstream SDK deprecation banner on startup
+warnings.filterwarnings("ignore", category=FutureWarning, message=r"(?s).*google\.generativeai.*")
+
 from app.api import chat, embed, health, search, citations, summarize, news
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
