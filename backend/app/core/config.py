@@ -66,6 +66,18 @@ class Settings(BaseSettings):
         "",
         validation_alias=AliasChoices("JWT_SECRET", "SUPABASE_JWT_SECRET"),
     )
+    environment: str = Field(
+        "development",
+        validation_alias=AliasChoices("ENVIRONMENT", "ENV", "NODE_ENV"),
+    )
+    enable_docs: bool = Field(
+        True,
+        validation_alias=AliasChoices("ENABLE_DOCS", "FASTAPI_DOCS"),
+    )
+    max_request_body_size: int = Field(
+        35 * 1024 * 1024,
+        validation_alias=AliasChoices("MAX_REQUEST_BODY_SIZE"),
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

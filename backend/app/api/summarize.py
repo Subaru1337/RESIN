@@ -38,5 +38,5 @@ async def generate_summary(request: Request, body: SummarizeRequest):
         err_msg = str(e)
         logger.error(f"Error generating summary: {err_msg}")
         if "quota" in err_msg.lower() or "429" in err_msg.lower():
-            raise HTTPException(status_code=429, detail=err_msg)
-        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {err_msg}")
+            raise HTTPException(status_code=429, detail="Summarization rate limit exceeded. Please try again later.")
+        raise HTTPException(status_code=500, detail="Failed to generate summary.")

@@ -38,4 +38,4 @@ async def sync_citations_endpoint(
         return res
     except Exception as e:
         logger.error(f"Error syncing citations: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to sync citation edges due to an internal server error.")

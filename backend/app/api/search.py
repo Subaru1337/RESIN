@@ -259,8 +259,8 @@ async def perform_get_paper_details(paper_id: str) -> dict:
             data = await fetch_openalex_paper(paper_id)
             _cache[cache_key] = {"data": data, "ts": now}
             return data
-        except Exception as e:
-            raise HTTPException(status_code=404, detail=f"Paper {paper_id} not found: {e}")
+        except Exception:
+            raise HTTPException(status_code=404, detail=f"Paper {paper_id} not found.")
 
     url = f"{SS_BASE_URL}/paper/{paper_id}"
     params = {"fields": FIELDS}

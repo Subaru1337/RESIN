@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { upsertPaper, getSummary } from "@/lib/db";
 import { useEffect, useState } from "react";
 import type { PaperSummary } from "@/lib/types";
+import { sanitizeUrl } from "@/lib/utils";
 
 interface PaperCardProps {
   paper: Paper;
@@ -66,16 +67,21 @@ export function PaperCard({ paper, persistedId, statusBadge, actionExtra }: Pape
         </div>
       </div>
 
-      <h3 className="font-serif-display text-xl sm:text-2xl font-semibold leading-snug mb-2 text-balance group-hover:text-primary transition-smooth">
-        {paper.open_access_url ? (
-          <a href={paper.open_access_url} target="_blank" rel="noreferrer" className="inline-flex items-start gap-2">
-            <span>{paper.title}</span>
-            <ExternalLink className="h-3.5 w-3.5 mt-2 opacity-50 shrink-0" />
-          </a>
-        ) : (
-          paper.title
-        )}
-      </h3>
+      {(() => {
+        const safeOpenAccessUrl = sanitizeUrl(paper.open_access_url);
+        return (
+          <h3 className="font-serif-display text-xl sm:text-2xl font-semibold leading-snug mb-2 text-balance group-hover:text-primary transition-smooth">
+            {safeOpenAccessUrl ? (
+              <a href={safeOpenAccessUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-start gap-2">
+                <span>{paper.title}</span>
+                <ExternalLink className="h-3.5 w-3.5 mt-2 opacity-50 shrink-0" />
+              </a>
+            ) : (
+              paper.title
+            )}
+          </h3>
+        );
+      })()}
 
       {paper.authors.length > 0 && (
         <div className="flex items-start gap-2 text-sm text-muted-foreground mb-3">
@@ -111,16 +117,20 @@ export function PaperCard({ paper, persistedId, statusBadge, actionExtra }: Pape
           </DialogContent>
         </Dialog>
 
-        {paper.doi && (
-          <a
-            href={`https://doi.org/${paper.doi}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-muted-foreground hover:text-foreground transition-smooth font-mono-tech inline-flex items-center gap-1"
-          >
-            doi:{paper.doi.split("/").slice(-1)[0]} <ExternalLink className="h-3 w-3" />
-          </a>
-        )}
+        {(() => {
+          const safeDoiUrl = paper.doi ? sanitizeUrl(`https://doi.org/${paper.doi.trim()}`) : undefined;
+          if (!safeDoiUrl) return null;
+          return (
+            <a
+              href={safeDoiUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground transition-smooth font-mono-tech inline-flex items-center gap-1"
+            >
+              doi:{paper.doi.split("/").slice(-1)[0]} <ExternalLink className="h-3 w-3" />
+            </a>
+          );
+        })()}
       </div>
     </article>
   );

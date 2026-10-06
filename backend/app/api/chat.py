@@ -1,6 +1,8 @@
 import json
+import logging
 import queue
 import threading
+import time
 from typing import Generator, Optional
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -17,6 +19,8 @@ from app.services.chat_service import (
 from app.services.rag import RAGService
 
 from app.core.timing import StageTimer, logger as timing_logger
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 rag_service = RAGService()
@@ -118,15 +122,26 @@ def chat_stream_endpoint(
                 )
                 save_chat_turn(user_id, payload.folder_id, "assistant", res.answer)
             except Exception as e:
-                q.put({"type": "error", "message": str(e)})
+                logger.exception(f"Unhandled error in agent research stream: {e}")
+                q.put({"type": "error", "message": "An error occurred during agent research execution."})
             finally:
                 q.put(None)  # Sentinel to end stream
 
         t = threading.Thread(target=run_agent, daemon=True)
         t.start()
 
+        start_time = time.time()
+        max_duration_seconds = 180.0
         while True:
-            evt = q.get()
+            if time.time() - start_time > max_duration_seconds:
+                payload_str = json.dumps({"type": "error", "message": "Research stream reached maximum execution duration."})
+                yield f"data: {payload_str}\n\n"
+                break
+            try:
+                evt = q.get(timeout=2.0)
+            except queue.Empty:
+                continue
+
             if evt is None:
                 break
             payload_str = json.dumps(evt)

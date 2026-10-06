@@ -3,6 +3,7 @@ import { Calendar, ExternalLink, Sparkles, Loader2 } from "lucide-react";
 import type { FeedItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { summariseArticle, isGeminiConfigured } from "@/lib/gemini";
+import { sanitizeUrl } from "@/lib/utils";
 
 interface FeedCardProps {
   item: FeedItem;
@@ -55,12 +56,21 @@ export function FeedCard({ item }: FeedCardProps) {
           <span>{readTime(item.summary)} min read</span>
         </div>
 
-        <h3 className="font-serif-display text-lg sm:text-xl font-semibold leading-snug text-balance mb-2">
-          <a href={item.url} target="_blank" rel="noreferrer" className="hover:text-primary transition-smooth inline-flex items-start gap-2">
-            {item.title}
-            <ExternalLink className="h-3.5 w-3.5 mt-1.5 opacity-40 shrink-0" />
-          </a>
-        </h3>
+        {(() => {
+          const safeUrl = sanitizeUrl(item.url);
+          return (
+            <h3 className="font-serif-display text-lg sm:text-xl font-semibold leading-snug text-balance mb-2">
+              {safeUrl ? (
+                <a href={safeUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-smooth inline-flex items-start gap-2">
+                  {item.title}
+                  <ExternalLink className="h-3.5 w-3.5 mt-1.5 opacity-40 shrink-0" />
+                </a>
+              ) : (
+                item.title
+              )}
+            </h3>
+          );
+        })()}
 
         {(aiSummary || item.summary) && (
           <p className="text-sm text-foreground/80 leading-relaxed line-clamp-3">

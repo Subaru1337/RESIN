@@ -12,6 +12,7 @@ import {
 } from "@/lib/ragApi";
 import type { Paper, RagChatMessage } from "@/lib/types";
 import { toast } from "sonner";
+import { sanitizeUrl } from "@/lib/utils";
 
 import { ReasoningText } from "@/components/ui/reasoning-text";
 
@@ -349,7 +350,22 @@ export function PaperChat({ paper, isInLibrary = false }: PaperChatProps) {
                 >
                   {msg.role === "assistant" ? (
                     <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed space-y-2">
-                      <ReactMarkdown>{msg.content || ""}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          a: ({ href, children, ...props }) => {
+                            const safe = sanitizeUrl(href);
+                            return safe ? (
+                              <a href={safe} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80" {...props}>
+                                {children}
+                              </a>
+                            ) : (
+                              <span>{children}</span>
+                            );
+                          },
+                        }}
+                      >
+                        {msg.content || ""}
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     msg.content

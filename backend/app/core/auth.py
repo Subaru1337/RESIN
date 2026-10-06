@@ -56,7 +56,7 @@ def get_current_user_id(
             logger.warning(f"JWT signature verification failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid authentication token: {str(e)}",
+                detail="Invalid authentication token.",
             )
 
     # 2. Secure remote verification via Supabase Auth API (fallback when JWT_SECRET not in env)

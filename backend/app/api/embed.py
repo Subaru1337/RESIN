@@ -312,7 +312,7 @@ def index_paper_endpoint(
                 }).eq("id", canonical_id).execute()
             except Exception:
                 pass
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Paper indexing failed due to an internal server error.")
 
 
 @router.get("/papers/{paper_id}/index-status")
@@ -425,4 +425,4 @@ async def upload_pdf_endpoint(
         raise
     except Exception as e:
         logger.exception(f"Error indexing uploaded PDF for {paper_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to process uploaded PDF due to an internal server error.")

@@ -25,6 +25,7 @@ import { generatePaperSummary, isGeminiConfigured } from "@/lib/gemini";
 import { upsertPaper, saveSummary, getSummary } from "@/lib/db";
 import { toast } from "sonner";
 import type { TriageItem, Paper, PaperSummary } from "@/lib/types";
+import { sanitizeUrl } from "@/lib/utils";
 
 const RANK_LABELS = ["#1 Pick", "#2 Pick", "#3 Pick"];
 const RANK_COLORS = [
@@ -385,21 +386,26 @@ function TriageCard({ item, rank }: { item: TriageItem; rank: number }) {
       </div>
 
       {/* Title */}
-      <h3 className="font-serif-display text-base sm:text-lg font-semibold leading-snug text-balance group-hover:text-primary transition-smooth">
-        {item.url ? (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-start gap-1.5"
-          >
-            <span>{item.title}</span>
-            <ExternalLink className="h-3.5 w-3.5 mt-1 opacity-50 shrink-0" />
-          </a>
-        ) : (
-          item.title
-        )}
-      </h3>
+      {(() => {
+        const safeUrl = sanitizeUrl(item.url);
+        return (
+          <h3 className="font-serif-display text-base sm:text-lg font-semibold leading-snug text-balance group-hover:text-primary transition-smooth">
+            {safeUrl ? (
+              <a
+                href={safeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-start gap-1.5"
+              >
+                <span>{item.title}</span>
+                <ExternalLink className="h-3.5 w-3.5 mt-1 opacity-50 shrink-0" />
+              </a>
+            ) : (
+              item.title
+            )}
+          </h3>
+        );
+      })()}
 
       {/* AI reason */}
       {item.reason && (
