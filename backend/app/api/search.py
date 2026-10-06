@@ -16,13 +16,21 @@ FIELDS = "paperId,externalIds,title,abstract,year,authors.name,citationCount,ope
 _cache: Dict[str, Dict[str, Any]] = {}
 CACHE_TTL_SECONDS = 600  # 10 minutes
 
+# Circuit breaker state for Semantic Scholar
+_ss_key_invalid: bool = False
+_ss_rate_limited_until: float = 0.0
+
 
 def get_ss_headers() -> dict:
+    global _ss_key_invalid
+    if _ss_key_invalid:
+        return {}
     headers = {}
     api_key = getattr(settings, "semantic_scholar_api_key", None)
     if api_key and api_key != "placeholder-key" and len(api_key.strip()) > 10:
         headers["x-api-key"] = api_key.strip()
     return headers
+
 
 
 def reconstruct_abstract(inverted_index: Optional[dict]) -> str:
@@ -198,6 +206,17 @@ async def perform_search(query: str, limit: int = 20) -> dict:
             _cache[cache_key] = {"data": res_data, "ts": now}
             return res_data
 
+    global _ss_key_invalid, _ss_rate_limited_until
+
+    # If Semantic Scholar is cooling down from rate limits or invalid key, route directly to OpenAlex
+    if now < _ss_rate_limited_until:
+        try:
+            data = await fetch_openalex_search(clean_q, limit)
+            _cache[cache_key] = {"data": data, "ts": now}
+            return data
+        except Exception:
+            pass
+
     url = f"{SS_BASE_URL}/paper/search"
     params = {
         "query": clean_q,
@@ -209,18 +228,21 @@ async def perform_search(query: str, limit: int = 20) -> dict:
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.get(url, params=params, headers=headers, timeout=8.0)
-            if resp.status_code == 403 and headers:
-                logger.warning("Semantic Scholar API key returned 403 Forbidden. Retrying without API key.")
-                resp = await client.get(url, params=params, timeout=8.0)
-
-            if resp.status_code == 200:
+            if resp.status_code == 403:
+                _ss_key_invalid = True
+                _ss_rate_limited_until = now + 120.0
+                logger.info("Semantic Scholar API key rejected (403 Forbidden). Disabled key; routing to OpenAlex.")
+            elif resp.status_code == 429:
+                _ss_rate_limited_until = now + 120.0
+                logger.info("Semantic Scholar rate-limited (429). Activating cooldown and routing to OpenAlex.")
+            elif resp.status_code == 200:
                 data = resp.json()
                 _cache[cache_key] = {"data": data, "ts": now}
                 return data
-
-            logger.warning(
-                f"Semantic Scholar returned status {resp.status_code}. Falling back to OpenAlex API..."
-            )
+            else:
+                logger.warning(
+                    f"Semantic Scholar returned status {resp.status_code}. Falling back to OpenAlex API..."
+                )
         except Exception as e:
             logger.warning(f"Semantic Scholar request error ({e}). Falling back to OpenAlex API...")
 
@@ -234,6 +256,7 @@ async def perform_search(query: str, limit: int = 20) -> dict:
             return _cache[cache_key]["data"]
         logger.error(f"OpenAlex fallback search error: {e}")
         raise HTTPException(status_code=502, detail="Failed to fetch papers from both Semantic Scholar and OpenAlex")
+
 
 
 async def perform_get_paper_details(paper_id: str) -> dict:
